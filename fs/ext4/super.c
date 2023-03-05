@@ -6351,7 +6351,7 @@ static int __init ext4_init_fs(void)
 	if (err)
 		return err;
 
-	err = ext4_init_pending();
+	err = ext4_init_post_read_processing();
 	if (err)
 		goto out6;
 
