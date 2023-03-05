@@ -69,6 +69,22 @@
 #include <asm/pgtable.h>
 #include <asm/mmu_context.h>
 
+#ifdef OPLUS_BUG_STABILITY
+#include <soc/oplus/system/oplus_process.h>
+#endif
+#if defined(OPLUS_FEATURE_VIRTUAL_RESERVE_MEMORY) && defined(CONFIG_VIRTUAL_RESERVE_MEMORY)
+//reserved area operations
+#include <linux/reserve_area.h>
+#endif
+
+#ifdef CONFIG_OPLUS_FEATURE_TPD
+#include <linux/tpd/tpd.h>
+#endif
+
+#ifdef CONFIG_OPLUS_FEATURE_UID_PERF
+extern void uid_check_out_pevent(struct task_struct *task);
+#endif
+
 /*
  * The default value should be high enough to not crash a system that randomly
  * crashes its kernel from time to time, but low enough to at least not permit
@@ -113,7 +129,6 @@ static __init int kernel_exit_sysfs_init(void)
 	return 0;
 }
 late_initcall(kernel_exit_sysfs_init);
->>>>>>> c97f22d9708631c0d9e9b81f461b931eb47bc1a8
 #endif
 
 static void __unhash_process(struct task_struct *p, bool group_dead)

@@ -185,6 +185,10 @@ void check_panic_on_warn(const char *origin)
 		      origin, limit);
 }
 
+#ifdef CONFIG_OPLUS_FEATURE_PANIC_FLUSH
+extern int panic_flush_device_cache(int timeout);
+#endif
+
 /**
  *	panic - halt the system
  *	@fmt: The text string to print
@@ -201,6 +205,9 @@ void panic(const char *fmt, ...)
 	int state = 0;
 	int old_cpu, this_cpu;
 	bool _crash_kexec_post_notifiers = crash_kexec_post_notifiers;
+#ifdef OPLUS_FEATURE_AGINGTEST
+	char *function_name;
+#endif /*OPLUS_FEATURE_AGINGTEST*/
 
 	if (panic_on_warn) {
 		/*
