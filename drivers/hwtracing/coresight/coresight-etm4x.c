@@ -1471,14 +1471,23 @@ static int etm4_probe(struct amba_device *adev, const struct amba_id *id)
 
 	spin_lock_init(&drvdata->spinlock);
 
-	drvdata->cpu = pdata ? pdata->cpu : 0;
+	drvdata->cpu = pdata ? pdata->cpu : -ENODEV;
+	if (drvdata->cpu == -ENODEV) {
+		dev_info(dev, "CPU not available\n");
+		return -ENODEV;
+	}
 
 	cpus_read_lock();
-	etmdrvdata[drvdata->cpu] = drvdata;
-
-	if (smp_call_function_single(drvdata->cpu,
-				etm4_init_arch_data,  drvdata, 1))
+	ret = smp_call_function_single(drvdata->cpu,
+					etm4_init_arch_data, drvdata, 1);
+	if (ret) {
 		dev_err(dev, "ETM arch init failed\n");
+		cpus_read_unlock();
+		return ret;
+	} else if (!etm4_arch_supported(drvdata->arch)) {
+		cpus_read_unlock();
+		return -EINVAL;
+	}
 
 	ret = etm4_pm_setup_cpuslocked();
 	cpus_read_unlock();
@@ -1487,11 +1496,6 @@ static int etm4_probe(struct amba_device *adev, const struct amba_id *id)
 	if (ret) {
 		etmdrvdata[drvdata->cpu] = NULL;
 		return ret;
-	}
-
-	if (etm4_arch_supported(drvdata->arch) == false) {
-		ret = -EINVAL;
-		goto err_arch_supported;
 	}
 
 	etm4_init_trace_id(drvdata);
@@ -1516,8 +1520,15 @@ static int etm4_probe(struct amba_device *adev, const struct amba_id *id)
 	}
 
 	pm_runtime_put(&adev->dev);
+	etmdrvdata[drvdata->cpu] = drvdata;
 	dev_info(dev, "CPU%d: ETM v%d.%d initialized\n",
 		 drvdata->cpu, drvdata->arch >> 4, drvdata->arch & 0xf);
+
+	drvdata->tupwr_disable = of_property_read_bool(drvdata->dev->of_node,
+				"qcom,tupwr-disable");
+
+	dev_info(dev, "CPU%d: %s initialized\n",
+			drvdata->cpu, (char *)id->data);
 
 	if (boot_enable) {
 		coresight_enable(drvdata->csdev);
